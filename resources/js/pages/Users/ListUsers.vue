@@ -1,13 +1,13 @@
 <script setup>
 import { ref, onMounted, reactive } from "vue";
+import {Form, Field} from 'vee-validate';
+import * as yup from 'yup';
+
 
 const users = ref([]);
-
-const form = reactive({
-    name: '',
-    email: '',
-    passsword: ''
-});
+const editing = ref(false);
+const formValues = ref();
+const form = ref(null);
 
 const getUsers = () => {
     axios.get("/api/users").then((response) => {
@@ -15,16 +15,43 @@ const getUsers = () => {
     });
 };
 
-const createUser = () => {
-    axios.post("/api/users", form)
+const addUserSchema = yup.object({
+    name: yup.string().required(),
+    email: yup.string().email().required(),
+    password: yup.string().required().min(8),
+});
+
+const editUserSchema = yup.object({
+    name: yup.string().required(),
+    email: yup.string().email().required(),
+    password: yup.string().when((password, schema) => {
+        console.log(password)
+        return password ? schema.required().min(10) : schema;
+    }),
+});
+
+const createUser = (values, {resetForm}) => {
+    axios.post("/api/users", values)
     .then((response) => {
-        users.value.unshift(response.data)
-        form.name = '';
-        form.email = '';
-        form.password = '';
-        // getUsers();
+        users.value.unshift(response.data);
         $("#createUser").modal('hide');
+        resetForm();
     });
+}
+
+const addUser = () => {
+    editing.value = false;
+    $("#createUser").modal('show');
+}
+
+const editUser = (user) => {
+    form.value.resetForm();
+    editing.value = true;
+    $("#createUser").modal('show');
+    formValues.value = {
+        name: user.name,
+        email: user.email
+    };
 }
 
 onMounted(() => {
@@ -54,10 +81,9 @@ onMounted(() => {
             <button
                 type="button"
                 class="btn btn-primary"
-                data-toggle="modal"
-                data-target="#createUser"
+                @click="addUser"
             >
-                Launch demo modal
+                Add User
             </button>
             <div class="card">
                 <div class="card-body">
@@ -68,6 +94,7 @@ onMounted(() => {
                                 <th scope="col">Name</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Role</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -76,6 +103,9 @@ onMounted(() => {
                                 <td>{{ user.name }}</td>
                                 <td>{{ user.email }}</td>
                                 <td>User</td>
+                                <td>
+                                    <a href="#" @click.prevent="editUser(user)"> <i class="fa fa-edit"/></a>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -97,7 +127,8 @@ onMounted(() => {
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLabel">
-                        Modal title
+                        <span v-if="editing">Edit User</span>
+                        <span v-else>Add New User</span>
                     </h5>
                     <button
                         type="button"
@@ -108,34 +139,37 @@ onMounted(() => {
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <form>
+                <Form ref="form" @submit="createUser" :validation-schema="editing ? editUserSchema : addUserSchema" v-slot="{ errors }" :initial-values="formValues">
+                    <div class="modal-body">
                         <div class="form-group">
                             <label for="name">Name</label>
-                            <input v-model="form.name" type="text" class="form-control" id="name" aria-describedby="emailHelp" placeholder="Enter name" name="name">
+                            <Field type="text" class="form-control" :class="{'is-invalid': errors.name}" id="name" aria-describedby="emailHelp" placeholder="Enter name" name="name" />
+                            <span class="invalid-feedback">{{ errors.name }}</span>
                         </div>
                         <div class="form-group">
                             <label for="exampleInputEmail1">Email address</label>
-                            <input v-model="form.email" type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email" name="email">
+                            <Field type="email" class="form-control" :class="{'is-invalid': errors.email}" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email" name="email" />
+                            <span class="invalid-feedback">{{ errors.email }}</span>
                         </div>
                         <div class="form-group">
                             <label for="exampleInputPassword1">Password</label>
-                            <input v-model="form.passsword" type="password" class="form-control" id="exampleInputPassword1" placeholder="Password" name="password">
+                            <Field type="password" class="form-control" :class="{'is-invalid': errors.password}" id="exampleInputPassword1" placeholder="Password" name="password" />
+                            <span class="invalid-feedback">{{ errors.password }}</span>
                         </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button
-                        type="button"
-                        class="btn btn-secondary"
-                        data-dismiss="modal"
-                    >
-                        Close
-                    </button>
-                    <button @click="createUser" type="button" class="btn btn-primary">
-                        Save
-                    </button>
-                </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal"
+                        >
+                            Close
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Save
+                        </button>
+                    </div>
+                </Form>
             </div>
         </div>
     </div>
