@@ -25,7 +25,6 @@ const editUserSchema = yup.object({
     name: yup.string().required(),
     email: yup.string().email().required(),
     password: yup.string().when((password, schema) => {
-        console.log(password)
         return password ? schema.required().min(10) : schema;
     }),
 });
@@ -39,6 +38,29 @@ const createUser = (values, {resetForm}) => {
     });
 }
 
+
+const updateUser = (values) => {
+    axios.put('/api/users/'+formValues.value.id, values)
+        .then((response) => {
+            const index = users.value.findIndex(user => user.id === response.data.id);
+            users.value[index] = response.data;
+            $("#createUser").modal('hide');
+        }).catch((err) => {
+            console.log(err);
+        }).finally(() =>{
+            form.value.resetForm();
+        });
+}
+
+const handleSubmit = (values) => {
+    if(editing.value){
+        updateUser(values);
+    }else{
+        createUser(values);
+    }
+
+}
+
 const addUser = () => {
     editing.value = false;
     $("#createUser").modal('show');
@@ -48,10 +70,8 @@ const editUser = (user) => {
     form.value.resetForm();
     editing.value = true;
     $("#createUser").modal('show');
-    formValues.value = {
-        name: user.name,
-        email: user.email
-    };
+    console.log(user);
+    formValues.value = user;
 }
 
 onMounted(() => {
@@ -139,7 +159,7 @@ onMounted(() => {
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <Form ref="form" @submit="createUser" :validation-schema="editing ? editUserSchema : addUserSchema" v-slot="{ errors }" :initial-values="formValues">
+                <Form ref="form" @submit="handleSubmit" :validation-schema="editing ? editUserSchema : addUserSchema" v-slot="{ errors }" :initial-values="formValues">
                     <div class="modal-body">
                         <div class="form-group">
                             <label for="name">Name</label>
@@ -148,12 +168,12 @@ onMounted(() => {
                         </div>
                         <div class="form-group">
                             <label for="exampleInputEmail1">Email address</label>
-                            <Field type="email" class="form-control" :class="{'is-invalid': errors.email}" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email" name="email" />
+                            <Field type="email" class="form-control" :class="{'is-invalid': errors.email}" id="email" aria-describedby="emailHelp" placeholder="Enter email" name="email" />
                             <span class="invalid-feedback">{{ errors.email }}</span>
                         </div>
                         <div class="form-group">
                             <label for="exampleInputPassword1">Password</label>
-                            <Field type="password" class="form-control" :class="{'is-invalid': errors.password}" id="exampleInputPassword1" placeholder="Password" name="password" />
+                            <Field type="password" class="form-control" :class="{'is-invalid': errors.password}" id="password" placeholder="Password" name="password" />
                             <span class="invalid-feedback">{{ errors.password }}</span>
                         </div>
                     </div>
