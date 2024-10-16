@@ -2,12 +2,14 @@
 import { ref, onMounted, reactive } from "vue";
 import {Form, Field} from 'vee-validate';
 import * as yup from 'yup';
+import {useToastr} from '../../toastr.js';
 
 
 const users = ref([]);
 const editing = ref(false);
 const formValues = ref();
 const form = ref(null);
+const toastr = useToastr();
 
 const getUsers = () => {
     axios.get("/api/users").then((response) => {
@@ -29,34 +31,43 @@ const editUserSchema = yup.object({
     }),
 });
 
-const createUser = (values, {resetForm}) => {
+const createUser = (values, {resetForm, setErrors}) => {
     axios.post("/api/users", values)
     .then((response) => {
         users.value.unshift(response.data);
         $("#createUser").modal('hide');
         resetForm();
+        toastr.success("User added successfully!");
+    }).catch((error) => {
+        if(error.response.data.errors){
+            setErrors(error.response.data.errors);
+        }
+        toastr.error("Something went wrong!");
     });
 }
 
 
-const updateUser = (values) => {
+const updateUser = (values, {setErrors}) => {
     axios.put('/api/users/'+formValues.value.id, values)
         .then((response) => {
             const index = users.value.findIndex(user => user.id === response.data.id);
             users.value[index] = response.data;
             $("#createUser").modal('hide');
-        }).catch((err) => {
-            console.log(err);
-        }).finally(() =>{
-            form.value.resetForm();
+            toastr.success("User updated successfully!");
+        }).catch((error) => {
+            if(error.response.data.errors){
+                setErrors(error.response.data.errors);
+            }
+            toastr.error("Something went wrong!");
+            console.log(error);
         });
 }
 
-const handleSubmit = (values) => {
+const handleSubmit = (values, actions) => {
     if(editing.value){
-        updateUser(values);
+        updateUser(values, actions);
     }else{
-        createUser(values);
+        createUser(values, actions);
     }
 
 }
@@ -70,8 +81,12 @@ const editUser = (user) => {
     form.value.resetForm();
     editing.value = true;
     $("#createUser").modal('show');
-    console.log(user);
-    formValues.value = user;
+    console.log(user.name);
+    formValues.value = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+    };
 }
 
 onMounted(() => {
