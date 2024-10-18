@@ -12,10 +12,14 @@ Route::get('/', function () {
 //     return view('index');
 // });
 
-Route::get('/api/users', [UserController::class, 'index']);
+Route::get('/users', [UserController::class, 'index']);
 
-Route::post('/api/users', [UserController::class, 'store']);
+Route::post('/users', [UserController::class, 'store']);
 
-Route::put('/api/users/{user}', [UserController::class, 'update']);
+Route::patch('/users/{user}/change-role', [UserController::class, 'changeRole']);
+
+Route::put('/users/{user}', [UserController::class, 'update']);
+
+Route::delete('/users/delete/{user}', [UserController::class, 'destroy']);
 
 Route::get('{view}', VueController::class)->where('view', '(.*)');

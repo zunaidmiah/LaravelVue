@@ -40,4 +40,15 @@ class UserController extends Controller
 
         return $user;
     }
+
+    public function destroy(User $user){
+        $user->delete();
+        return response()->noContent();
+    }
+
+    public function changeRole(Request $request, User $user){
+        $user->role = $request->role;
+        $user->save();
+        return response()->noContent();
+    }
 }
